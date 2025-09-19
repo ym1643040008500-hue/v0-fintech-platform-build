@@ -1,24 +1,19 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { db } from "@/lib/firebase-client"
-import { doc, onSnapshot } from "firebase/firestore"
+import { useEffect, useState } from "react";
+import { db } from "@/lib/firebase";
+import { doc, onSnapshot } from "firebase/firestore";
 
-export function useWallet(userId: string) {
-  const [wallet, setWallet] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+export function useWallet(walletId: string) {
+  const [balance, setBalance] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!userId) return
+    const unsub = onSnapshot(doc(db, "wallets", walletId), (docSnap) => {
+      setBalance(docSnap.data()?.balance || 0);
+    });
 
-    const walletRef = doc(db, "wallets", userId)
-    const unsubscribe = onSnapshot(walletRef, (snapshot) => {
-      setWallet(snapshot.data())
-      setLoading(false)
-    })
+    return () => unsub();
+  }, [walletId]);
 
-    return () => unsubscribe()
-  }, [userId])
-
-  return { wallet, loading }
+  return { balance };
 }

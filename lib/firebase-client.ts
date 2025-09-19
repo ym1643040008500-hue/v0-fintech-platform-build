@@ -3,6 +3,17 @@ import { initializeApp, getApps, getApp } from "firebase/app"
 import { getAuth } from "firebase/auth"
 import { getFirestore } from "firebase/firestore"
 import { getStorage } from "firebase/storage"
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "./firebase-client"; // مسار الـ db عندك
+
+export const createRealAccount = async (uid: string) => {
+  await setDoc(doc(db, "users", uid), {
+    type: "real",
+    balance: 0,        // يبدأ من صفر
+    createdAt: serverTimestamp(),
+    verified: true     // حساب حقيقي مباشرة
+  });
+};
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
