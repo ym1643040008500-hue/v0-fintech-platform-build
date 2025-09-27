@@ -1,29 +1,29 @@
 "use client"
 
-import { ReactNode, useEffect } from "react"
-import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
+import { useRouter } from "next/navigation"
+import { ReactNode, useEffect } from "react"
 
 interface ProtectedRouteProps {
   children: ReactNode
 }
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user, loading } = useAuth()
+  const { user } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push("/login")
+    if (user === null) {
+      router.push("/login") // لو مش مسجل → يروح لصفحة تسجيل الدخول
     }
-  }, [user, loading, router])
-
-  if (loading) {
-    return <div className="h-screen flex items-center justify-center text-white">جاري التحقق...</div>
-  }
+  }, [user, router])
 
   if (!user) {
-    return null
+    return (
+      <div className="h-screen flex items-center justify-center text-gray-200">
+        جاري التحقق من تسجيل الدخول...
+      </div>
+    )
   }
 
   return <>{children}</>
