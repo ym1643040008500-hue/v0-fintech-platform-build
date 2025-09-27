@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Link from "next/link"
 import { useAuth } from "@/lib/auth-context"
 import { db } from "@/lib/firebase"
 import { collection, addDoc, serverTimestamp, getDocs } from "firebase/firestore"
@@ -10,45 +11,85 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { Clock4, CheckCircle, Shield } from "lucide-react"
-import { paymentMethods } from "@/lib/payment-methods"
+import { Clock4, CheckCircle, Shield, Smartphone, Wallet, Globe, ArrowLeft } from "lucide-react"
+
+// 🟢 طرق الدفع
+const paymentMethods = [
+  {
+    id: "etisalat",
+    name: "اتصالات كاش",
+    icon: <Smartphone className="w-5 h-5 text-green-400" />,
+    fee: 1.5,
+    minAmount: 50,
+    details: "رقم المحفظة: 01123456789\nالاسم: أحمد محمد",
+  },
+  {
+    id: "vodafone",
+    name: "فودافون كاش",
+    icon: <Smartphone className="w-5 h-5 text-red-400" />,
+    fee: 1.5,
+    minAmount: 50,
+    details: "رقم المحفظة: 01098765432\nالاسم: Vodafone User",
+  },
+  {
+    id: "orange",
+    name: "أورانج كاش",
+    icon: <Smartphone className="w-5 h-5 text-orange-400" />,
+    fee: 1.5,
+    minAmount: 50,
+    details: "رقم المحفظة: 01234567890\nالاسم: Orange Cash",
+  },
+  {
+    id: "instapay",
+    name: "InstaPay",
+    icon: <Wallet className="w-5 h-5 text-blue-400" />,
+    fee: 1.0,
+    minAmount: 20,
+    details: "InstaPay ID: user@bank.com\nالبنك: CIB",
+  },
+  {
+    id: "paypal",
+    name: "PayPal",
+    icon: <Globe className="w-5 h-5 text-sky-400" />,
+    fee: 2.5,
+    minAmount: 10,
+    details: "PayPal Email: yourbusiness@paypal.com",
+  },
+]
 
 export default function WalletPage() {
   const { userProfile } = useAuth()
   const [tab, setTab] = useState<"deposit" | "withdraw">("deposit")
-  const [selectedMethod, setSelectedMethod] = useState("paypal")
+  const [selectedMethod, setSelectedMethod] = useState("etisalat")
   const [amount, setAmount] = useState("")
   const [transactionId, setTransactionId] = useState("")
+  const [withdrawAccount, setWithdrawAccount] = useState("")
   const [isProcessing, setIsProcessing] = useState(false)
-  const [deposits, setDeposits] = useState<any[]>([])
-  const [withdrawals, setWithdrawals] = useState<any[]>([])
+  const [history, setHistory] = useState<any[]>([])
 
-  const selectedPaymentMethod = paymentMethods.find((m) => m.id === selectedMethod)
+  const methodObj = paymentMethods.find((m) => m.id === selectedMethod)
   const numericAmount = Number.parseFloat(amount) || 0
-  const feeAmount = selectedPaymentMethod ? (numericAmount * selectedPaymentMethod.fee) / 100 : 0
+  const feeAmount = methodObj ? (numericAmount * methodObj.fee) / 100 : 0
   const totalAmount = tab === "deposit" ? numericAmount + feeAmount : numericAmount - feeAmount
 
-  // 🔹 load history
+  // تحميل السجل
   useEffect(() => {
     if (!userProfile?.uid) return
     const fetchData = async () => {
-      const depSnap = await getDocs(collection(db, "deposits"))
-      const deps = depSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
-        .filter((d: any) => d.userId === userProfile.uid)
+      const depositsSnap = await getDocs(collection(db, "deposits"))
+      const withdrawSnap = await getDocs(collection(db, "withdrawals"))
 
-      const withSnap = await getDocs(collection(db, "withdrawals"))
-      const withs = withSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
-        .filter((d: any) => d.userId === userProfile.uid)
+      const deps = depositsSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+      const withs = withdrawSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
 
-      setDeposits(deps)
-      setWithdrawals(withs)
+      setHistory([...deps, ...withs].filter((t: any) => t.userId === userProfile.uid))
     }
     fetchData()
   }, [userProfile])
 
-  // 🔹 handle submit
+  // إرسال الطلب
   const handleSubmit = async () => {
-    if (!selectedPaymentMethod || numericAmount < selectedPaymentMethod.minAmount || !transactionId) return
+    if (!methodObj || numericAmount < methodObj.minAmount) return
     try {
       setIsProcessing(true)
       const target = tab === "deposit" ? "deposits" : "withdrawals"
@@ -57,11 +98,13 @@ export default function WalletPage() {
         method: selectedMethod,
         amount: numericAmount,
         transactionId,
+        withdrawAccount: tab === "withdraw" ? withdrawAccount : null,
         status: "pending",
         createdAt: serverTimestamp(),
       })
       setAmount("")
       setTransactionId("")
+      setWithdrawAccount("")
     } finally {
       setIsProcessing(false)
     }
@@ -69,6 +112,16 @@ export default function WalletPage() {
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
+      {/* زر رجوع للصفحة الرئيسية */}
+      <div className="flex justify-start">
+        <Link href="/dashboard">
+          <Button variant="outline" className="flex items-center gap-2 border-white/30 text-white hover:bg-white/10">
+            <ArrowLeft className="w-4 h-4" />
+            <span>الصفحة الرئيسية</span>
+          </Button>
+        </Link>
+      </div>
+
       {/* الرصيد */}
       <Card className="glass-card border-white/20">
         <CardContent className="p-6 flex items-center justify-between">
@@ -89,73 +142,67 @@ export default function WalletPage() {
           <TabsTrigger value="withdraw">سحب</TabsTrigger>
         </TabsList>
 
-        {/* إيداع */}
-        <TabsContent value="deposit">
+        {/* إيداع / سحب */}
+        <TabsContent value={tab}>
           <Card className="glass-card border-white/20">
             <CardHeader>
-              <CardTitle className="text-white">إيداع الأموال</CardTitle>
+              <CardTitle className="text-white">{tab === "deposit" ? "إيداع الأموال" : "سحب الأموال"}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* اختيار وسيلة الدفع */}
               <div>
                 <Label className="text-white">اختر وسيلة الدفع</Label>
-                <select
-                  className="w-full p-2 rounded bg-white/10 text-white"
-                  value={selectedMethod}
-                  onChange={(e) => setSelectedMethod(e.target.value)}
-                >
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-2">
                   {paymentMethods.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
+                    <div
+                      key={m.id}
+                      onClick={() => setSelectedMethod(m.id)}
+                      className={`cursor-pointer p-3 rounded-lg border flex items-center gap-2 
+                      ${selectedMethod === m.id ? "bg-white/20 border-green-400" : "bg-white/5 border-white/20"}`}
+                    >
+                      {m.icon}
+                      <span className="text-white text-sm">{m.name}</span>
+                    </div>
                   ))}
-                </select>
+                </div>
               </div>
-              <div>
-                <Label className="text-white">المبلغ</Label>
-                <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
-              </div>
-              <div>
-                <Label className="text-white">Transaction ID</Label>
-                <Input value={transactionId} onChange={(e) => setTransactionId(e.target.value)} />
-              </div>
-              <Button disabled={isProcessing} onClick={handleSubmit}>
-                {isProcessing ? "جارٍ المعالجة..." : "تأكيد الإيداع"}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
-        {/* سحب */}
-        <TabsContent value="withdraw">
-          <Card className="glass-card border-white/20">
-            <CardHeader>
-              <CardTitle className="text-white">سحب الأموال</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label className="text-white">اختر وسيلة الدفع</Label>
-                <select
-                  className="w-full p-2 rounded bg-white/10 text-white"
-                  value={selectedMethod}
-                  onChange={(e) => setSelectedMethod(e.target.value)}
-                >
-                  {paymentMethods.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* تفاصيل الدفع أو خانة السحب */}
+              {tab === "deposit" && methodObj && (
+                <div className="p-3 bg-white/5 rounded border border-white/10 text-white text-sm whitespace-pre-line">
+                  <strong>تفاصيل الدفع:</strong>
+                  <p className="mt-1">{methodObj.details}</p>
+                </div>
+              )}
+              {tab === "withdraw" && (
+                <div>
+                  <Label className="text-white">اكتب رقم المحفظة/الحساب لسحب الأموال</Label>
+                  <Input value={withdrawAccount} onChange={(e) => setWithdrawAccount(e.target.value)} placeholder="مثال: 01012345678" />
+                </div>
+              )}
+
+              {/* المبلغ */}
               <div>
                 <Label className="text-white">المبلغ</Label>
                 <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
+                {methodObj && (
+                  <p className="text-xs text-white/60 mt-1">
+                    الحد الأدنى: {methodObj.minAmount} ج.م — رسوم: {methodObj.fee}% — الإجمالي: {totalAmount} ج.م
+                  </p>
+                )}
               </div>
-              <div>
-                <Label className="text-white">Transaction ID</Label>
-                <Input value={transactionId} onChange={(e) => setTransactionId(e.target.value)} />
-              </div>
-              <Button disabled={isProcessing} onClick={handleSubmit}>
-                {isProcessing ? "جارٍ المعالجة..." : "تأكيد السحب"}
+
+              {/* Transaction ID (فقط عند الإيداع) */}
+              {tab === "deposit" && (
+                <div>
+                  <Label className="text-white">Transaction ID</Label>
+                  <Input value={transactionId} onChange={(e) => setTransactionId(e.target.value)} />
+                </div>
+              )}
+
+              {/* زر */}
+              <Button disabled={isProcessing} onClick={handleSubmit} className="w-full">
+                {isProcessing ? "جارٍ المعالجة..." : tab === "deposit" ? "تأكيد الإيداع" : "تأكيد السحب"}
               </Button>
             </CardContent>
           </Card>
@@ -168,10 +215,10 @@ export default function WalletPage() {
           <CardTitle className="text-white">سجل العمليات</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {[...deposits, ...withdrawals].length === 0 ? (
+          {history.length === 0 ? (
             <p className="text-white/60 text-sm">لا يوجد عمليات بعد</p>
           ) : (
-            [...deposits, ...withdrawals].map((tx) => (
+            history.map((tx) => (
               <div key={tx.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10">
                 <div className="flex items-center gap-3">
                   {tx.status === "pending" ? (
@@ -181,11 +228,11 @@ export default function WalletPage() {
                   )}
                   <div>
                     <p className="text-white text-sm">{paymentMethods.find((m) => m.id === tx.method)?.name || tx.method}</p>
-                    <p className="text-white/60 text-xs">{tx.transactionId}</p>
+                    <p className="text-white/60 text-xs">{tx.transactionId || tx.withdrawAccount}</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-white font-medium">${tx.amount}</p>
+                  <p className="text-white font-medium">{tx.amount} ج.م</p>
                   <p className={`text-xs ${tx.status === "pending" ? "text-yellow-400" : "text-green-400"}`}>
                     {tx.status === "pending" ? "قيد المراجعة" : "مكتمل"}
                   </p>
