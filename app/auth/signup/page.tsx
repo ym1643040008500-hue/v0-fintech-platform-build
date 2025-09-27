@@ -1,6 +1,8 @@
-import { SignupForm } from "@/components/auth/signup-form"
-import Link from "next/link"
-import { TrendingUp } from "lucide-react"
+"use client";
+
+import { SignupForm } from "@/components/auth/signup-form";
+import Link from "next/link";
+import { TrendingUp } from "lucide-react";
 
 export default function SignupPage() {
   return (
@@ -20,7 +22,7 @@ export default function SignupPage() {
         <SignupForm />
 
         {/* روابط إضافية */}
-        <div className="text-center">
+        <div className="text-center space-y-2">
           <p className="text-sm text-muted-foreground">
             لديك حساب بالفعل؟{" "}
             <Link href="/auth/login" className="text-primary hover:underline">
@@ -30,5 +32,5 @@ export default function SignupPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

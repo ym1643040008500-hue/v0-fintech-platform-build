@@ -21,10 +21,17 @@ export function QuickStats() {
         const snap = await getDoc(docRef)
         if (snap.exists()) {
           const data = snap.data()
+
+          // استخدام القيم الافتراضية إذا كانت غير موجودة
+          const totalBalance = data.totalBalance ?? 0
+          const todaysPL = data.todaysPL ?? 0
+          const activePositions = data.activePositions ?? 0
+          const pendingOrders = data.pendingOrders ?? 0
+
           setStats([
             {
               title: "Total Balance",
-              value: `$${data.totalBalance.toLocaleString()}`,
+              value: `$${totalBalance.toLocaleString()}`,
               change: "+$1,200",
               changePercent: "+9.3%",
               icon: Wallet,
@@ -32,15 +39,15 @@ export function QuickStats() {
             },
             {
               title: "Today's P&L",
-              value: `${data.todaysPL >= 0 ? "+" : ""}$${data.todaysPL}`,
+              value: `${todaysPL >= 0 ? "+" : ""}$${todaysPL.toLocaleString()}`,
               change: "vs yesterday",
               changePercent: "+2.1%",
               icon: TrendingUp,
-              trend: data.todaysPL >= 0 ? "up" : "down",
+              trend: todaysPL >= 0 ? "up" : "down",
             },
             {
               title: "Active Positions",
-              value: data.activePositions,
+              value: activePositions,
               change: "positions open",
               changePercent: "",
               icon: ArrowUpRight,
@@ -48,7 +55,7 @@ export function QuickStats() {
             },
             {
               title: "Pending Orders",
-              value: data.pendingOrders,
+              value: pendingOrders,
               change: "limit orders",
               changePercent: "",
               icon: Clock,
