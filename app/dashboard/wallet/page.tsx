@@ -28,7 +28,7 @@ const paymentMethods = [
     name: "فودافون كاش",
     icon: <Smartphone className="w-5 h-5 text-red-400" />,
     fee: 1.5,
-    minAmount: 50,
+    minAmount: 10,
     details: "رقم المحفظة: 01098765432\nالاسم: Vodafone User",
   },
   {
