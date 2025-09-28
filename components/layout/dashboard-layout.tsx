@@ -6,7 +6,8 @@ interface DashboardLayoutProps {
   children: ReactNode
 }
 
-export default function DashboardLayout({ children }: DashboardLayoutProps) {
+// ✅ Export Named عشان يشتغل مع الاستيراد { DashboardLayout }
+export function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <div className="min-h-screen flex flex-col bg-[#0B0E11] text-white">
       {/* ✅ Sidebar */}
